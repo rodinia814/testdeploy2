@@ -74,7 +74,6 @@ GitLog lastlog = task lastlog(type: GitLog) {
     maxCommits = 1
     doLast {
         lastCommitHash = log.get(0).abbreviatedId
-        println lastCommitHash
     }
 }
 
@@ -145,6 +144,7 @@ task mergeToMaster {
     pushMaster.execute()
 
     masterTag.tagName = 'release-' + release
+    masterTag.execute()
     pushMasterTag.execute()
 
 }
