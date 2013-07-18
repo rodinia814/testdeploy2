@@ -1,0 +1,142 @@
+//
+// This script performs an automatic merge of develop's HEAD to master. It is meant to be run interactively - not via TeamCity or other CI tool.
+// This is based on the manual process defined here: https://github.com/DynamisCorp/PlanDesigner-v2/wiki/Production-Deployment-Process
+// The automated version follows the intent but not the explicit steps of the manual process.
+//
+// Usage: gradle mergeToMaster
+//
+// TODO: Rethink fetch/merge of origin/develop to local.  What if develop is ahead of the point that we want to push to master?
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.ajoberstar:gradle-git:0.6.0'
+        classpath 'org.kohsuke:github-api:1.43'
+    }
+}
+
+
+import org.ajoberstar.gradle.git.tasks.*
+
+import java.text.SimpleDateFormat
+
+def develop = 'develop'
+def master = 'master'
+def release
+def snapshot
+def yy
+def mm
+
+// Manipulate a file's content.
+def processFileInplace(file, Closure processText) {
+    def text = file.text
+    file.write(processText(text))
+}
+
+// Update the gradle.properties file with a version that is passed in.
+def processVersion(version) {
+    def gradleProperties = new File("gradle.properties")
+    processFileInplace(gradleProperties) { text ->
+        text.replaceAll('\nversion[ ]*=[ ]*[0-9.-a-zA-Z]*[\n]', '\n' + version + '\n')
+    }
+    println 'Updating to ' + version
+}
+
+// Prompt the user (using Swing) for the release and snapshot version strings.
+def ask = task ask {
+
+    //TODO: Check for system properties that have been explictly set.  If not set then prompt.
+    def regex = '[0-9][0-9].[0-1][0-9].[0-9]*'
+    def snapRegex = regex + '-SNAPSHOT'
+    SimpleDateFormat sdfYy = new SimpleDateFormat("yy");
+    def date = new Date()
+    yy = sdfYy.format(date);
+    SimpleDateFormat sdfMm = new SimpleDateFormat("MM");
+    mm = sdfMm.format(date);
+    release = (String) javax.swing.JOptionPane.showInputDialog(null,
+            "Please enter the release version", "Release Version",
+            javax.swing.JOptionPane.PLAIN_MESSAGE, null, null, yy + "." + mm + ".0");
+    if (!release.matches(regex)) {
+        throw new IllegalArgumentException("Version must be of the form YY.MM.[0-9]")
+    }
+    snapshot = (String) javax.swing.JOptionPane.showInputDialog(null,
+            "Please enter the snapshot version", "Snapshot Version",
+            javax.swing.JOptionPane.PLAIN_MESSAGE, null, null, yy + "." + mm + ".1-SNAPSHOT");
+    if (!snapshot.matches(snapRegex)) {
+        throw new IllegalArgumentException("Version must be of the form YY.MM.[0-9]-SNAPSHOT")
+    }
+}
+
+// Get the last commit hash for the current working branch.
+def lastCommitHash
+GitLog lastLog = task log(type: GitLog) {
+    maxCommits = 1
+    doLast {
+        lastCommitHash = $it.abbreviatedId
+    }
+}
+
+// In order to control task execution order, and to allow certain task properties to be configured, declare task objects here.  For the most part,
+// these Git commands are NOT idempotent and cannot be reused.  That is a limitation of the underling jGit technology.
+GitCheckout checkoutDevelop = task(type: GitCheckout) {}
+GitCheckout checkoutMaster = task(type: GitCheckout) {}
+GitFetch fetch = task fetch(type: GitFetch) {}
+GitMerge mergeDevelop = task mergeDevelop(type: GitMerge) {}
+GitMerge mergeMaster = task mergeMaster(type: GitMerge) {}
+GitMerge mergeDevelopIntoMaster = task mergeMaster(type: GitMerge) {}
+GitCommit commitDevelop = task commitDevelop(type: GitCommit)
+GitPush pushDevelop = task pushDevelop(type: GitPush)
+GitPush pushMaster = task pushDevelop(type: GitPush)
+GitPush pushMasterTag = task pushDevelop(type: GitPush)
+GitTag masterTag = task masterTag(type: GitTag)
+
+checkoutDevelop.branchName = develop
+checkoutMaster.branchName = master
+mergeDevelop.ref = develop
+mergeMaster.ref = master
+pushDevelop.remote = 'origin'
+pushMaster.remote = 'origin'
+pushMasterTag.remote = 'origin'
+
+// This is the primary workflow/task.  It explicitly controls the order of operations.
+task mergeToMaster {
+
+    //Prompt for release version values.
+    ask.execute();
+
+    //Get local working tree sync'd to the latest develop branch from the remote
+    println 'Checking out ' + checkoutDevelop.getBranchName()
+    checkoutDevelop.execute()
+    println 'Fetching from ' + fetch.getRemote()
+    fetch.execute()
+    println 'Merging ...'
+    mergeDevelop.execute()
+    //Modify version string in gradle.properties
+    processVersion('version = ' + release)
+    //Commit to Develop
+    commitDevelop.message = 'Release ' + release
+    commitDevelop.execute()
+    lastLog.execute()
+
+    //Modify version string (again) in gradle.properties
+    processVersion('version = ' + snapshot)
+    //Commit
+    commitDevelop.message = 'Moving to ' + snapshot
+    commitDevelop.execute()
+    pushDevelop.execute()
+
+    println 'Checking out ' + checkoutMaster.getBranchName()
+    checkoutMaster.execute()
+    println 'Fetching from ' + fetch.getRemote()
+    fetch.execute()
+    println 'Merging ...'
+    mergeMaster.execute()
+    mergeDevelopIntoMaster.ref = lastCommitHash
+    mergeDevelopIntoMaster.execute();
+    pushMaster.execute()
+
+    masterTag.tagName = 'release-' + release
+    pushMasterTag.execute()
+}
