@@ -70,11 +70,11 @@ def ask = task ask {
 
 // Get the last commit hash for the current working branch.
 def lastCommitHash
-GitLog log = task log(type: GitLog) {
+GitLog lastlog = task lastlog(type: GitLog) {
     maxCommits = 1
     doLast {
         log.each {
-            lastCommitHash = $it.abbreviatedId
+            lastCommitHash = ${it}.abbreviatedId
         }
         println lastCommitHash
     }
@@ -125,7 +125,7 @@ task mergeToMaster {
     //Commit to Develop
     commitDevelop1.message = 'Release ' + release
     commitDevelop1.execute()
-    log.execute()
+    lastlog.execute()
 
     //Modify version string (again) in gradle.properties
     processVersion('version = ' + snapshot)
