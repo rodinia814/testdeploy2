@@ -90,6 +90,7 @@ GitPush pushDevelop = task pushDevelop(type: GitPush)
 GitPush pushMaster = task pushMaster(type: GitPush)
 GitPush pushMasterTag = task pushMasterTag(type: GitPush)
 GitTag masterTag = task masterTag(type: GitTag)
+GitAdd add = task add(type: GitAdd)
 
 checkoutDevelop.branchName = develop
 checkoutMaster.branchName = master
@@ -114,6 +115,8 @@ task mergeToMaster {
     mergeDevelop.execute()
     //Modify version string in gradle.properties
     processVersion('version = ' + release)
+    add.include('gradle.properties')
+    add.execute()
     //Commit to Develop
     commitDevelop.message = 'Release ' + release
     commitDevelop.execute()
@@ -121,6 +124,7 @@ task mergeToMaster {
 
     //Modify version string (again) in gradle.properties
     processVersion('version = ' + snapshot)
+    add.execute()
     //Commit
     commitDevelop.message = 'Moving to ' + snapshot
     commitDevelop.execute()
