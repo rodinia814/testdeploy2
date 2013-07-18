@@ -85,12 +85,14 @@ GitFetch fetch = task fetch(type: GitFetch) {}
 GitMerge mergeDevelop = task mergeDevelop(type: GitMerge) {}
 GitMerge mergeMaster = task mergeMaster(type: GitMerge) {}
 GitMerge mergeDevelopIntoMaster = task mergeDevelopIntoMaster(type: GitMerge) {}
-GitCommit commitDevelop = task commitDevelop(type: GitCommit)
+GitCommit commitDevelop1 = task commitDevelop1(type: GitCommit)
+GitCommit commitDevelop2 = task commitDevelop2(type: GitCommit)
 GitPush pushDevelop = task pushDevelop(type: GitPush)
 GitPush pushMaster = task pushMaster(type: GitPush)
 GitPush pushMasterTag = task pushMasterTag(type: GitPush)
 GitTag masterTag = task masterTag(type: GitTag)
-GitAdd add = task add(type: GitAdd)
+GitAdd add1 = task add1(type: GitAdd)
+GitAdd add2 = task add2(type: GitAdd)
 
 checkoutDevelop.branchName = develop
 checkoutMaster.branchName = master
@@ -115,19 +117,20 @@ task mergeToMaster {
     mergeDevelop.execute()
     //Modify version string in gradle.properties
     processVersion('version = ' + release)
-    add.include('gradle.properties')
-    add.execute()
+    add1.include('gradle.properties')
+    add1.execute()
     //Commit to Develop
-    commitDevelop.message = 'Release ' + release
-    commitDevelop.execute()
+    commitDevelop1.message = 'Release ' + release
+    commitDevelop1.execute()
     lastLog.execute()
 
     //Modify version string (again) in gradle.properties
     processVersion('version = ' + snapshot)
-    add.execute()
+    add2.include('gradle.properties')
+    add2.execute()
     //Commit
-    commitDevelop.message = 'Moving to ' + snapshot
-    commitDevelop.execute()
+    commitDevelop2.message = 'Moving to ' + snapshot
+    commitDevelop2.execute()
     pushDevelop.execute()
 
     println 'Checking out ' + checkoutMaster.getBranchName()
@@ -142,4 +145,5 @@ task mergeToMaster {
 
     masterTag.tagName = 'release-' + release
     pushMasterTag.execute()
+
 }
