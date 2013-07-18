@@ -73,7 +73,9 @@ def lastCommitHash
 GitLog lastLog = task lastlog(type: GitLog) {
     maxCommits = 1
     doLast {
-        lastCommitHash = $it.abbreviatedId
+        log each {
+            lastCommitHash = $it.abbreviatedId
+        }
         println lastCommitHash
     }
 }
