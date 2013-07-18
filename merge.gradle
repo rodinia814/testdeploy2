@@ -145,6 +145,7 @@ task mergeToMaster {
 
     masterTag.tagName = 'release-' + release
     masterTag.execute()
+    pushMasterTag.pushTags = true
     pushMasterTag.execute()
 
 }
