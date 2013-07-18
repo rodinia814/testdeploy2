@@ -131,6 +131,7 @@ task mergeToMaster {
     //Commit
     commitDevelop2.message = 'Moving to ' + snapshot
     commitDevelop2.execute()
+    pushDevelop.credentials = fetch.credentials
     pushDevelop.execute()
 
     println 'Checking out ' + checkoutMaster.getBranchName()
@@ -141,11 +142,13 @@ task mergeToMaster {
     mergeMaster.execute()
     mergeDevelopIntoMaster.ref = lastCommitHash
     mergeDevelopIntoMaster.execute();
+    pushMaster.credentials = fetch.credentials
     pushMaster.execute()
 
     masterTag.tagName = 'release-' + release
     masterTag.execute()
     pushMasterTag.pushTags = true
+    pushMasterTag.credentials = fetch.credentials
     pushMasterTag.execute()
 
 }
