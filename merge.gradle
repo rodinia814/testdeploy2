@@ -70,7 +70,7 @@ def ask = task ask {
 
 // Get the last commit hash for the current working branch.
 def lastCommitHash
-GitLog lastLog = task log(type: GitLog) {
+GitLog lastLog = task (type: GitLog) {
     maxCommits = 1
     doLast {
         lastCommitHash = $it.abbreviatedId
@@ -84,11 +84,11 @@ GitCheckout checkoutMaster = task(type: GitCheckout) {}
 GitFetch fetch = task fetch(type: GitFetch) {}
 GitMerge mergeDevelop = task mergeDevelop(type: GitMerge) {}
 GitMerge mergeMaster = task mergeMaster(type: GitMerge) {}
-GitMerge mergeDevelopIntoMaster = task mergeMaster(type: GitMerge) {}
+GitMerge mergeDevelopIntoMaster = task mergeDevelopIntoMaster(type: GitMerge) {}
 GitCommit commitDevelop = task commitDevelop(type: GitCommit)
 GitPush pushDevelop = task pushDevelop(type: GitPush)
-GitPush pushMaster = task pushDevelop(type: GitPush)
-GitPush pushMasterTag = task pushDevelop(type: GitPush)
+GitPush pushMaster = task pushMaster(type: GitPush)
+GitPush pushMasterTag = task pushMasterTag(type: GitPush)
 GitTag masterTag = task masterTag(type: GitTag)
 
 checkoutDevelop.branchName = develop
